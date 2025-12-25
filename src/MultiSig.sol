@@ -66,8 +66,9 @@ contract MultiSig {
 
     constructor(address[] memory _owners, uint256 _required) {
         if (_owners.length == 0) revert InvalidOwnerCount();
-        if (_required == 0 || _required > _owners.length)
+        if (_required == 0 || _required > _owners.length) {
             revert InvalidThreshold();
+        }
 
         for (uint256 i = 0; i < _owners.length; i++) {
             address owner = _owners[i];
@@ -91,21 +92,12 @@ contract MultiSig {
     function submitTransaction(address _to, uint256 _value) external onlyOwner {
         uint256 txIndex = transactions.length;
 
-        transactions.push(
-            Transaction({
-                to: _to,
-                value: _value,
-                executed: false,
-                numConfirmations: 0
-            })
-        );
+        transactions.push(Transaction({to: _to, value: _value, executed: false, numConfirmations: 0}));
 
         emit SubmitTransaction(msg.sender, txIndex);
     }
 
-    function confirmTransaction(
-        uint256 _txIndex
-    )
+    function confirmTransaction(uint256 _txIndex)
         external
         onlyOwner
         txExists(_txIndex)
@@ -119,9 +111,7 @@ contract MultiSig {
         emit ConfirmTransaction(msg.sender, _txIndex);
     }
 
-    function executeTransaction(
-        uint256 _txIndex
-    ) external onlyOwner txExists(_txIndex) notExecuted(_txIndex) {
+    function executeTransaction(uint256 _txIndex) external onlyOwner txExists(_txIndex) notExecuted(_txIndex) {
         Transaction storage transaction = transactions[_txIndex];
 
         if (transaction.numConfirmations < numConfirmationsRequired) {
@@ -131,15 +121,13 @@ contract MultiSig {
         // CEI Pattern: Update state BEFORE external call
         transaction.executed = true;
 
-        (bool success, ) = transaction.to.call{value: transaction.value}("");
+        (bool success,) = transaction.to.call{value: transaction.value}("");
         if (!success) revert TransferFailed();
 
         emit ExecuteTransaction(msg.sender, _txIndex);
     }
 
-    function revokeConfirmation(
-        uint256 _txIndex
-    ) external onlyOwner txExists(_txIndex) notExecuted(_txIndex) {
+    function revokeConfirmation(uint256 _txIndex) external onlyOwner txExists(_txIndex) notExecuted(_txIndex) {
         if (!isConfirmed[_txIndex][msg.sender]) revert TxNotConfirmed();
 
         Transaction storage transaction = transactions[_txIndex];
